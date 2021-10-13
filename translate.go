@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"chat/structs"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
