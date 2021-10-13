@@ -9,11 +9,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"translate/structs"
 
 	"github.com/joho/godotenv"
 )
 
-func main(){
+func main() {
 	err := godotenv.Load(fmt.Sprintf("%s.env", os.Getenv("key")))
 	if err != nil {
 		fmt.Println("Error loading environment")
@@ -42,7 +43,10 @@ func main(){
 	//再翻訳するために２つ作成
 
 	//Create an anonymous struct for your request body and encode it to JSON
-	text := string(msg)
+	var msg string
+	fmt.Println("入力して")
+	fmt.Scanf("%s", &msg)
+	text := msg
 
 	body := []struct {
 		Text string `json:"text"`
