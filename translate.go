@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"chat/structs"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,8 +14,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func main() {
-	err := godotenv.Load(fmt.Sprintf("../%s.env", os.Getenv("key")))
+func main(){
+	err := godotenv.Load(fmt.Sprintf("%s.env", os.Getenv("key")))
 	if err != nil {
 		fmt.Println("Error loading environment")
 		log.Fatal(err)
@@ -26,13 +28,13 @@ func main() {
 	uri := endpoint + os.Getenv("uri")
 	//envファイルで読み込んだものを代入
 
-	//fmt.Print("//IMPORTANT PLEASE READ//\n\nCheck your subscriptionKey and location.\nSubscriptionKey: "+AzureData.subscriptionKey, "\nlocation: "+AzureData.location, "\n\n")
+	//IMPORTANT PLEASE READ Check your subscriptionKey and location.
 
 	u, _ := url.Parse(uri)
 	v, _ := url.Parse(uri)
 	q := u.Query()
 	r := v.Query()
-	//q.Add("from", "ja")
+	q.Add("from", "ja")
 	q.Add("to", "en")
 	r.Add("from", "en")
 	r.Add("to", "ja")
@@ -41,16 +43,12 @@ func main() {
 	//再翻訳するために２つ作成
 
 	//Create an anonymous struct for your request body and encode it to JSON
-
-	var insert string
-
-	fmt.Println("再翻訳テスト：日本語で何か入力してください")
-	fmt.Scanf("%s", &insert)
+	text := string(msg)
 
 	body := []struct {
-		Text string
+		Text string `json:"text"`
 	}{
-		{Text: insert},
+		{Text: text},
 	}
 
 	b, _ := json.Marshal(body)
@@ -71,39 +69,27 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Decode the JSON response
-	var result interface{}
-	if err := json.NewDecoder(res.Body).Decode(&result); err != nil {
-		log.Fatal(err)
-	}
-	// Format and print the response to terminal
-	prettyJSON, _ := json.MarshalIndent(result, "", " ")
-	fmt.Printf("%s\n", prettyJSON)
+	var arr []structs.TranslationRes
 
-	// ////////////////////////////////////ここまで1回目翻訳///////////////////////////////////
+	translations, err := ioutil.ReadAll(res.Body)
 
-	var a interface{} //prettyJSONの中身を取り出すためにインタフェースを定義
-
-	err = json.Unmarshal(prettyJSON, &a)
 	if err != nil {
 		log.Fatal(err)
 	}
-	temp := a.([]interface{})
-	temp2 := temp[0]
-	temp3 := temp2.(map[string]interface{})["translations"]
-	temp4 := temp3.([]interface{})
-	temp5 := temp4[0]
-	text_str := temp5.(map[string]interface{})["text"].(string)
-	/*ちなみに、全部取り出そうと思うと、[]interface {}{map[string]interface {}
-	{"translations":[]interface {}{map[string]interface {}
-	{"text":"Hello.(example)", "to":"en"}}}} となる。なんだっそら！*/
 
-	//Unmarshalしたものを"text"まで取り出す
+	err = json.Unmarshal(translations, &arr)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	Datum := []struct { //再翻訳させるためにJSON用の構造体を再度用意
-		Text string
+	text_str := arr[0].Translation[0].Text
+	//fmt.Println(text_str)
+	///////////////////////////////////////ここまで1回目翻訳///////////////////////////////////
+
+	Datum := []struct { //再翻訳するためのjson構造体を用意する
+		Text string `json:"text"`
 	}{
-		{Text: text_str}, //英語に翻訳された文
+		{Text: text_str},
 	}
 	c, _ := json.Marshal(Datum)
 
@@ -125,13 +111,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var retranslate interface{}
-	if err = json.NewDecoder(res2.Body).Decode(&retranslate); err != nil {
+	translations2, err := ioutil.ReadAll(res2.Body)
+	if err != nil {
 		log.Fatal(err)
-	} //デコード処理
+	}
 
-	// Format and print the response to terminal
-	retranslate_res, _ := json.MarshalIndent(retranslate, "", " ")
-	fmt.Printf("%s\n", retranslate_res) //再翻訳されたもの
-	//JSONで出力
+	err = json.Unmarshal(translations2, &arr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	text_str2 := arr[0].Translation[0].Text
+
+	fmt.Println("英語翻訳後: ", text_str)
+	fmt.Println("再翻訳後: ", text_str2)
 }
